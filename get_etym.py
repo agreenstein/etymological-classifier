@@ -1,4 +1,5 @@
 # coding=utf-8
+import sys
 import os
 import lxml.html
 import urllib2
@@ -35,9 +36,9 @@ def get_etym(word, tested_link_words):
 			entry_text = lxml.etree.tostring(entry)
 			links = re.findall('<a href="\/word\/?\'?([^"\'>]*)', entry_text)
 			# Find the other words linked in the entries
-			# If any of them are roots (not prefixes or suffixes that include a "-"), get the etymology of them
+			# If any of them are roots (not prefixes or suffixes that include a "-" or single letters), get the etymology of them
 			for link_word in links:
-				if "-" not in link_word and link_word not in tested_link_words:
+				if "-" not in link_word and len(link_word) > 1 and link_word not in tested_link_words:
 					tested_link_words.append(link_word)
 					etym = get_etym(link_word, tested_link_words)
 			curr_resp = parse_etym_paragraph(entry_text)
@@ -57,14 +58,14 @@ def get_etym(word, tested_link_words):
 		return False
 
 def parse_etym_paragraph(paragraph):
+	# remove the text within parentheses: these are either irrelevant details of time (e.g. centuries) or part of speech, 
+	# or a description of other words that it is the source of
+	paragraph = remove_in_paren(paragraph)
 	# remove the html syntax from the paragraph
 	cleaned_paragraph = re.sub(re.compile('<.*?>'), "", paragraph)
-	# only take the first sentence that describes the word origins (often entries say "source also for xyz..." and we don't want this)
-	# TODO this is a problem, maybe shouldn't use a regex --> try instead to just find "(source" and corresponding ")"
-	etym_def = re.sub('\(source[^>]+\)', '', cleaned_paragraph)
 	etymologies = []
 	# split the entry up into branches delineated by "from" statements
-	for branch in etym_def.split("from "):
+	for branch in cleaned_paragraph.split("from "):
 		curr_branch = word_tokenize(branch)
 		# the language will be the first phrase (after "from " or the first phrase overall)
 		curr_etym = curr_branch[0]
@@ -94,6 +95,25 @@ def get_lem(word):
 	else:
 		return str(lemmatizer.lemmatize(pos[0])), pos[1][0].lower()
 
+#  function to remove text within parentheses
+def remove_in_paren(paragraph):
+	# assume that each open parenthesis has a matching closed one
+	num_to_remove = paragraph.count('(')
+	removed_all = False
+	removed = 0
+	while removed < num_to_remove:
+		# find the last open parenthesis
+		open_paren = paragraph.rfind('(')
+		# find the first closed parenthesis from that index on
+		closed_paren_diff = paragraph[open_paren:].find(')')
+		if open_paren == -1 or closed_paren_diff == -1:
+			break
+		else:
+			# update the paragraph to remove the text between the matching open and closed parens
+			# the index of the closed parenthesis can be found by adding the closed_paren_diff to the open_paren index
+			paragraph = paragraph[0:open_paren] + paragraph[(open_paren + closed_paren_diff + 1):]
+			removed += 1
+	return paragraph
 
 ## Use the functions
 languages = []
@@ -105,30 +125,56 @@ with open(os.getcwd() + "/list_of_languages.txt") as lol:
 
 # line = subjective_content[0]
 # use a dictionary to keep track of what word origins we've seen
-origins = {}
-for line in objective_content[0:2]:
-	curr_origins = {}
-	for word in word_tokenize(line):
-		if word not in stop_words:
-			print "word is %s " % word
-			pos = pos_tag(word_tokenize(word))[0][1]
-			word_etym = get_etym(word, [])
-			if word_etym:
-				print word_etym
-				for origin in word_etym:
-					if origin not in origins:
-						origins[origin] = 0
-					origins[origin] += 1
-					if origin not in curr_origins:
-						curr_origins[origin] = 0
-					curr_origins[origin] += 1
-	print "\n" + "line is: %s" % line 
-	for origin in curr_origins:
-		# if origin in languages:
-		print "%s - %d" % (origin, curr_origins[origin]) 
+# origins = {}
+# for line in objective_content[0:2]:
+# 	curr_origins = {}
+# 	for word in word_tokenize(line):
+# 		if word not in stop_words:
+# 			print "word is %s " % word
+# 			pos = pos_tag(word_tokenize(word))[0][1]
+# 			word_etym = get_etym(word, [])
+# 			if word_etym:
+# 				print word_etym
+# 				for origin in word_etym:
+# 					if origin not in origins:
+# 						origins[origin] = 0
+# 					origins[origin] += 1
+# 					if origin not in curr_origins:
+# 						curr_origins[origin] = 0
+# 					curr_origins[origin] += 1
+# 	print "\n" + "line is: %s" % line 
+# 	for origin in curr_origins:
+# 		# if origin in languages:
+# 		print "%s - %d" % (origin, curr_origins[origin]) 
 
-print "Total for all objective content:"
-for origin in origins:
-	# if origin in languages:
-	# 	print "%s - %d" % (origin, origins[origin])
-	print "%s - %d" % (origin, origins[origin])
+# print "Total for all objective content:"
+# for origin in origins:
+# 	# if origin in languages:
+# 	# 	print "%s - %d" % (origin, origins[origin])
+# 	print "%s - %d" % (origin, origins[origin])
+
+if __name__ == "__main__":
+	# run all of the data and save the etymologies in a file so that looking up the etymologies later is faster
+	outfile = sys.argv[1]
+	output = open(outfile, 'w')
+	header = 'word\t[etymology]\n'
+	output.write(header)
+	all_content = objective_content + subjective_content
+	words = {}
+	counter = 0
+	for line in all_content:
+		print "\n" + line
+		for word in word_tokenize(line):
+			if word not in words:
+				words[word] = 1
+				pos = pos_tag(word_tokenize(word))[0][1]
+				word_etym = get_etym(word, [])
+				if word_etym:
+					print word + " - " + str(word_etym)
+					outline = '{0}\t{1}\n'.format(word, str(word_etym))
+					output.write(outline)
+		counter += 1
+		if counter % 100 == 0:
+			print "\n \n \n--------------Checking line number %d--------------n \n \n \n" % counter
+
+
