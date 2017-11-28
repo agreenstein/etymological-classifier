@@ -9,16 +9,6 @@ from nltk import word_tokenize, pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
 
-lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words('english'))
-# nltk.download('wordnet')
-
-# pass this function the full path to the data (which should be a text file)
-subjective_file = os.getcwd() + "/rotten_imdb/quote.tok.gt9.5000"
-subjective_content = open(subjective_file).readlines()
-objective_file = os.getcwd() + "/rotten_imdb/plot.tok.gt9.5000"
-objective_content = open(objective_file).readlines()
-
 
 def get_etym(word, tested_link_words):	
 	try:
@@ -154,27 +144,47 @@ with open(os.getcwd() + "/list_of_languages.txt") as lol:
 # 	print "%s - %d" % (origin, origins[origin])
 
 if __name__ == "__main__":
+	lemmatizer = WordNetLemmatizer()
+	stop_words = set(stopwords.words('english'))
+	# nltk.download('wordnet')
+	# pass this function the full path to the data (which should be a text file)
+	subjective_file = os.getcwd() + "/rotten_imdb/quote.tok.gt9.5000"
+	subjective_content = open(subjective_file).readlines()
+	objective_file = os.getcwd() + "/rotten_imdb/plot.tok.gt9.5000"
+	objective_content = open(objective_file).readlines()
 	# run all of the data and save the etymologies in a file so that looking up the etymologies later is faster
 	outfile = sys.argv[1]
 	output = open(outfile, 'w')
 	header = 'word\t[etymology]\n'
 	output.write(header)
-	all_content = objective_content + subjective_content
+	# all_content = objective_content + subjective_content
+	all_content = subjective_content
+	# create a dictionary of words that we already scraped
+	prev_words = {}
+	prev_scrap = open("scraped_etymologies_0.txt").readlines()
+	prev_scrap = prev_scrap[1:]
+	for line in prev_scrap:
+		line = line.rstrip()
+		prev_word = line.split('\t')[0]
+		prev_words[prev_word] = 1
 	words = {}
 	counter = 0
 	for line in all_content:
-		print "\n" + line
-		for word in word_tokenize(line):
-			if word not in words:
-				words[word] = 1
-				pos = pos_tag(word_tokenize(word))[0][1]
-				word_etym = get_etym(word, [])
-				if word_etym:
-					print word + " - " + str(word_etym)
-					outline = '{0}\t{1}\n'.format(word, str(word_etym))
-					output.write(outline)
+		try:
+			print "\n" + line
+			for word in word_tokenize(line):
+				if word not in words and word not in prev_words:
+					words[word] = 1
+					pos = pos_tag(word_tokenize(word))[0][1]
+					word_etym = get_etym(word, [])
+					if word_etym:
+						print word + " - " + str(word_etym)
+						outline = '{0}\t{1}\n'.format(word, str(word_etym))
+						output.write(outline)
+		except:
+			print "skipping a line because of an error"
 		counter += 1
 		if counter % 100 == 0:
-			print "\n \n \n--------------Checking line number %d--------------n \n \n \n" % counter
+			print "\n \n \n--------------Checking line number %d-------------- \n \n \n" % counter
 
 
