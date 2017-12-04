@@ -19,8 +19,7 @@ def get_etym(word, tested_link_words):
 		# When the same word is used as multiple parts of speech, only one of the entries actually has the etymology information
 		# Derivative parts of speech refer to the main entry
 		# For example: call (n.) early 14c., "a loud cry, an outcry," also "a summons, an invitation," from call (v.).
-		# I think when there are multiple entries, adjectives are always the first entry, nouns the second, and verbs the third
-		# Because of this, we can just get the etymologies for all of the entries, and then filter out later for languages
+		# Because of this, we can just get the etymologies for all of the entries, and follow the links
 		entries = doc.xpath("//section[@class = 'word__defination--2q7ZH']/object/p[2]")
 		for entry in entries:
 			entry_text = lxml.etree.tostring(entry)
@@ -105,14 +104,13 @@ def remove_in_paren(paragraph):
 			removed += 1
 	return paragraph
 
-## Use the functions
-languages = []
-with open(os.getcwd() + "/list_of_languages.txt") as lol:
-	content = lol.readlines()
-	for line in content:
-		languages.append(line.rstrip())
 
-
+# languages = []
+# with open(os.getcwd() + "/list_of_languages.txt") as lol:
+# 	content = lol.readlines()
+# 	for line in content:
+# 		languages.append(line.rstrip())
+#
 # line = subjective_content[0]
 # use a dictionary to keep track of what word origins we've seen
 # origins = {}
