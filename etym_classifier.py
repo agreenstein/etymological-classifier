@@ -8,6 +8,7 @@ import collections
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 from get_etym import get_lem
+import random
 
 def build_etym_dict(etym_file):
 	etym_dict = {}
@@ -50,17 +51,28 @@ def get_cleaned_languages(languages_dict, acceptable_modifiers, list_of_language
 				cleaned_languages[curr] += count
 	return cleaned_languages
 
-def vectorize(line, ordered_languages):
+def vectorize(line, ordered_languages, only_first):
 	line_vector = np.zeros(len(ordered_languages))
-	for word in word_tokenize(line):
-		lem = get_lem(word)[0]
-		curr_entry = ""
-		if lem in etym_dict:
-			curr_entry = etym_dict[lem]
-			for lang in curr_entry:
-				cleaned_lang = clean_entry(lang, acceptable_modifiers, list_of_languages, other_languages)
-				idx = ordered_languages.keys().index(cleaned_lang)
-				line_vector[idx] += 1
+	try:
+		for word in word_tokenize(line):
+			try:
+				lem = get_lem(word)[0]
+				curr_entry = ""
+				if lem in etym_dict:
+					curr_entry = etym_dict[lem]
+					if only_first:
+						cleaned_lang = clean_entry(curr_entry[0], acceptable_modifiers, list_of_languages, other_languages)
+						idx = ordered_languages.keys().index(cleaned_lang)
+						line_vector[idx] += 1
+					else:
+						for lang in curr_entry:
+								cleaned_lang = clean_entry(lang, acceptable_modifiers, list_of_languages, other_languages)
+								idx = ordered_languages.keys().index(cleaned_lang)
+								line_vector[idx] += 1
+			except:
+				pass
+	except:
+		return False
 	return line_vector
 
 # function to remove any words in the entry that aren't languages or acceptable modifiers
@@ -71,6 +83,40 @@ def clean_entry(lang_entry, acceptable_modifiers, list_of_languages, other_langu
 			cleaned += word + " "
 	cleaned = cleaned.strip()
 	return cleaned
+
+def experiment(num_test, subjective_vectors, objective_vectors):
+	training_data = []
+	training_labels = []
+	testing_data = []
+	testing_labels = []
+	testing_indices = random.sample(range(0, len(subjective_vectors)), num_test)
+	for i in range(len(subjective_vectors)):
+		if i in testing_indices:
+			testing_data.append(subjective_vectors[i])
+			testing_labels.append("subjective")
+		else:
+			training_data.append(subjective_vectors[i])
+			training_labels.append("subjective")
+
+	for i in range(len(objective_vectors)):
+		if i in testing_indices:
+			testing_data.append(objective_vectors[i])
+			testing_labels.append("objective")
+		else:
+			training_data.append(objective_vectors[i])
+			training_labels.append("objective")
+
+	classifier = svm.SVC()
+	classifier.fit(training_data, training_labels)
+	predictions = classifier.predict(testing_data)
+
+	misclassified = 0
+	for i in range(len(predictions)):
+		if predictions[i] != testing_labels[i]:
+			misclassified += 1
+	return misclassified
+
+
 
 
 if __name__ == "__main__":
@@ -95,8 +141,39 @@ if __name__ == "__main__":
 	cleaned_languages = get_cleaned_languages(languages, acceptable_modifiers, list_of_languages, other_languages)
 	ordered_languages = collections.OrderedDict(sorted(cleaned_languages.items(), key=lambda t: t[0]))
 
+	subjective_vectors_onlyFirst = []
+	subjective_vectors_all = []
+	for i in range(len(subjective_content)):
+		line = subjective_content[i]
+		vec_onlyFirst = vectorize(line, ordered_languages, True)
+		if type(vec_onlyFirst) != bool:
+			subjective_vectors_onlyFirst.append(vec_onlyFirst)
+		vec_all = vectorize(line, ordered_languages, False)
+		if type(vec_all) != bool:
+			subjective_vectors_all.append(vec_all)
 
-line = subjective_content[100]
+	objective_vectors_onlyFirst = []
+	objective_vectors_all = []
+	for i in range(len(objective_content)):
+		line = objective_content[i]
+		vec_onlyFirst = vectorize(line, ordered_languages, True)
+		if type(vec_onlyFirst) != bool:
+			objective_vectors_onlyFirst.append(vec_onlyFirst)
+		vec_all = vectorize(line, ordered_languages, False)
+		if type(vec_all) != bool:
+			objective_vectors_all.append(vec_all)
 
-	# print curr_entry
+	misclassified_onlyFirst = []
+	misclassified_all = []
+	num_test = 100
+	for i in range(5):
+		print "-----Trial %d-----" % i
+		curr_misclassified_onlyFirst = experiment(num_test, subjective_vectors_onlyFirst, objective_vectors_onlyFirst)
+		misclassified_pct_onlyFirst = 100*(float(curr_misclassified_onlyFirst) / (num_test*2))
+		print "%.1f%% correctly classified when only using first origin" % (100 - misclassified_pct_onlyFirst)
+		misclassified_onlyFirst.append(misclassified_pct_onlyFirst)
+		curr_misclassified_all = experiment(num_test, subjective_vectors_all, objective_vectors_all)
+		misclassified_pct_all = 100*(float(curr_misclassified_all) / (num_test*2))
+		print "%.1f%% correctly classified when using all origins" % (100 - misclassified_pct_all)
+		misclassified_all.append(misclassified_pct_all)
 
