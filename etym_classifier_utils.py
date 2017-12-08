@@ -10,6 +10,9 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from get_etym import get_lem
 import random
 
+
+# function that reads the contents of a file containing the etymologies of desired words and builds a dictionary
+# in which the keys are the words and the etymologies are the values
 def build_etym_dict(etym_file):
 	etym_dict = {}
 	etym_file_content = open(etym_file).readlines()
@@ -29,6 +32,19 @@ def build_etym_dict(etym_file):
 		etym_dict[word] = curr_etym
 	return etym_dict
 
+
+# function that lemmatizes a given word
+def get_lem(word):
+	# structure of pos is (word, partOfSpeech)
+	pos = pos_tag(word_tokenize(word))[0]
+	# if the part of speech is an adjective, noun, or verb, then pass lemmatizer the part of speech for increased accuracy
+	if pos[1][0].lower() in ['a','n','v']:
+		return str(lemmatizer.lemmatize(pos[0],pos[1][0].lower())), pos[1][0].lower()
+	# otherwise just pass lemmatizer the word
+	else:
+		return str(lemmatizer.lemmatize(pos[0])), pos[1][0].lower()
+
+# function that 
 def get_list_of_languages(etym_dict):
 	languages = {}
 	for word, entry in etym_dict.items():
@@ -115,65 +131,4 @@ def experiment(num_test, subjective_vectors, objective_vectors):
 		if predictions[i] != testing_labels[i]:
 			misclassified += 1
 	return misclassified
-
-
-
-
-if __name__ == "__main__":
-	lemmatizer = WordNetLemmatizer()
-	stop_words = set(stopwords.words('english'))
-
-	subjective_file = os.getcwd() + "/rotten_imdb/quote.tok.gt9.5000"
-	subjective_content = open(subjective_file).readlines()
-	objective_file = os.getcwd() + "/rotten_imdb/plot.tok.gt9.5000"
-	objective_content = open(objective_file).readlines()
-
-	etym_dict = build_etym_dict("scraped_etymologies.txt")
-
-	languages = get_list_of_languages(etym_dict)
-	acceptable_modifiers = ["Proto", "Old", "Middle", "High", "Low", "Late", "Medieval", "Modern", "Anglo-French", "American", "Canadian"]
-	list_of_languages = []
-	with open(os.getcwd() + "/list_of_languages.txt") as lol:
-		content = lol.readlines()
-		for line in content:
-			list_of_languages.append(line.rstrip())
-	other_languages = ["PIE", "Germanic", "Norse", "Etruscan", "Gaelic", "Italic", "Gaulish"]
-	cleaned_languages = get_cleaned_languages(languages, acceptable_modifiers, list_of_languages, other_languages)
-	ordered_languages = collections.OrderedDict(sorted(cleaned_languages.items(), key=lambda t: t[0]))
-
-	subjective_vectors_onlyFirst = []
-	subjective_vectors_all = []
-	for i in range(len(subjective_content)):
-		line = subjective_content[i]
-		vec_onlyFirst = vectorize(line, ordered_languages, True)
-		if type(vec_onlyFirst) != bool:
-			subjective_vectors_onlyFirst.append(vec_onlyFirst)
-		vec_all = vectorize(line, ordered_languages, False)
-		if type(vec_all) != bool:
-			subjective_vectors_all.append(vec_all)
-
-	objective_vectors_onlyFirst = []
-	objective_vectors_all = []
-	for i in range(len(objective_content)):
-		line = objective_content[i]
-		vec_onlyFirst = vectorize(line, ordered_languages, True)
-		if type(vec_onlyFirst) != bool:
-			objective_vectors_onlyFirst.append(vec_onlyFirst)
-		vec_all = vectorize(line, ordered_languages, False)
-		if type(vec_all) != bool:
-			objective_vectors_all.append(vec_all)
-
-	misclassified_onlyFirst = []
-	misclassified_all = []
-	num_test = 100
-	for i in range(5):
-		print "-----Trial %d-----" % i
-		curr_misclassified_onlyFirst = experiment(num_test, subjective_vectors_onlyFirst, objective_vectors_onlyFirst)
-		misclassified_pct_onlyFirst = 100*(float(curr_misclassified_onlyFirst) / (num_test*2))
-		print "%.1f%% correctly classified when only using first origin" % (100 - misclassified_pct_onlyFirst)
-		misclassified_onlyFirst.append(misclassified_pct_onlyFirst)
-		curr_misclassified_all = experiment(num_test, subjective_vectors_all, objective_vectors_all)
-		misclassified_pct_all = 100*(float(curr_misclassified_all) / (num_test*2))
-		print "%.1f%% correctly classified when using all origins" % (100 - misclassified_pct_all)
-		misclassified_all.append(misclassified_pct_all)
 

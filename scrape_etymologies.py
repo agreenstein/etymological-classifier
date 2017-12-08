@@ -10,6 +10,9 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
 
 
+# function that takes an input word, gets the lemmatization of it, submits a url request to the appropriate etymology page,
+# and finds the languages contained within the response entries
+# returns either an array of the langauge origin, or false if there is an error
 def get_etym(word, tested_link_words):	
 	try:
 		etym = []
@@ -25,7 +28,7 @@ def get_etym(word, tested_link_words):
 			entry_text = lxml.etree.tostring(entry)
 			links = re.findall('<a href="\/word\/?\'?([^"\'>]*)', entry_text)
 			# Find the other words linked in the entries
-			# If any of them are roots (not prefixes or suffixes that include a "-" or single letters), get the etymology of them
+			# If any of them are roots (not prefixes or suffixes that include a "-" or single letters), get the etymology of them by recursively calling get_etym
 			for link_word in links:
 				if "-" not in link_word and len(link_word) > 1 and link_word not in tested_link_words:
 					tested_link_words.append(link_word)
@@ -46,6 +49,11 @@ def get_etym(word, tested_link_words):
 		# print "No etymology information for word %s (lem %s) \n" % (word, lem)
 		return False
 
+
+# function that parses the etymology entry on a given page to find the origin languages contained within
+# it returns an array of the origin languages contained within an entry
+# because the entries list origin languages from most to least recent, the relative order is maintained such that
+# the first language returned is the most recent
 def parse_etym_paragraph(paragraph):
 	# remove the text within parentheses: these are either irrelevant details of time (e.g. centuries) or part of speech, 
 	# or a description of other words that it is the source of
@@ -74,17 +82,21 @@ def parse_etym_paragraph(paragraph):
 	return etymologies
 
 
+# function that lemmatizes a given word
 def get_lem(word):
 	# structure of pos is (word, partOfSpeech)
 	pos = pos_tag(word_tokenize(word))[0]
-	# if the part of speech is an adjective, noun, or verb, then pass lematize the part of speech
+	# if the part of speech is an adjective, noun, or verb, then pass lemmatizer the part of speech for increased accuracy
 	if pos[1][0].lower() in ['a','n','v']:
 		return str(lemmatizer.lemmatize(pos[0],pos[1][0].lower())), pos[1][0].lower()
-	# otherwise just pass lematize the word
+	# otherwise just pass lemmatizer the word
 	else:
 		return str(lemmatizer.lemmatize(pos[0])), pos[1][0].lower()
 
-#  function to remove text within parentheses
+
+# function to remove text within parentheses
+# this is necessary because entries often contain sentences in parentheses saying "source also of..." that list related words in other languges
+# when looking for a word's languages of origin though, we don't want this data
 def remove_in_paren(paragraph):
 	# assume that each open parenthesis has a matching closed one
 	num_to_remove = paragraph.count('(')
@@ -105,45 +117,16 @@ def remove_in_paren(paragraph):
 	return paragraph
 
 
-# languages = []
-# with open(os.getcwd() + "/list_of_languages.txt") as lol:
-# 	content = lol.readlines()
-# 	for line in content:
-# 		languages.append(line.rstrip())
-#
-# line = subjective_content[0]
-# use a dictionary to keep track of what word origins we've seen
-# origins = {}
-# for line in objective_content[0:2]:
-# 	curr_origins = {}
-# 	for word in word_tokenize(line):
-# 		if word not in stop_words:
-# 			print "word is %s " % word
-# 			pos = pos_tag(word_tokenize(word))[0][1]
-# 			word_etym = get_etym(word, [])
-# 			if word_etym:
-# 				print word_etym
-# 				for origin in word_etym:
-# 					if origin not in origins:
-# 						origins[origin] = 0
-# 					origins[origin] += 1
-# 					if origin not in curr_origins:
-# 						curr_origins[origin] = 0
-# 					curr_origins[origin] += 1
-# 	print "\n" + "line is: %s" % line 
-# 	for origin in curr_origins:
-# 		# if origin in languages:
-# 		print "%s - %d" % (origin, curr_origins[origin]) 
 
-# print "Total for all objective content:"
-# for origin in origins:
-# 	# if origin in languages:
-# 	# 	print "%s - %d" % (origin, origins[origin])
-# 	print "%s - %d" % (origin, origins[origin])
-
+# the main function
+# this file should be called from the command line as follows:
+# python scrape_etymologies.py <output_filename>
+# the file assumes that the data to get the etymologies for is in a folder called "rotten_imdb" in the current directory
+# when run, the program goes through all of the words in the subjective and objective data files and finds the origin languages for them
+# the results are stored in an output file for quicker access later
 if __name__ == "__main__":
 	lemmatizer = WordNetLemmatizer()
-	stop_words = set(stopwords.words('english'))
+	# the following line may need to be run the first time
 	# nltk.download('wordnet')
 	# pass this function the full path to the data (which should be a text file)
 	subjective_file = os.getcwd() + "/rotten_imdb/quote.tok.gt9.5000"
@@ -158,6 +141,7 @@ if __name__ == "__main__":
 	# all_content = objective_content + subjective_content
 	all_content = subjective_content
 	# create a dictionary of words that we already scraped
+	# this was necessary because approximately half of the total lines were saved before a crash
 	prev_words = {}
 	prev_scrap = open("scraped_etymologies_0.txt").readlines()
 	prev_scrap = prev_scrap[1:]
