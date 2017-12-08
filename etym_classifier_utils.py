@@ -1,7 +1,8 @@
+# coding=utf-8
 import numpy as np
 import sklearn
 from sklearn import svm
-from nltk import word_tokenize
+from nltk import word_tokenize, pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 import random
 
@@ -76,7 +77,7 @@ def clean_entry(lang_entry, acceptable_modifiers, list_of_languages):
 # and returns a dictionary containing only the languages in the original language dictionary that exist (with acceptable modifiers) in the list of languages
 def get_cleaned_languages(languages_dict, acceptable_modifiers, list_of_languages):
 	cleaned_languages = {}
-	for lang, count in languages.items():
+	for lang, count in languages_dict.items():
 		# clean the language entry
 		curr = clean_entry(lang, acceptable_modifiers, list_of_languages)
 		# add this cleaned language (and its count) to the dictionary
@@ -95,14 +96,17 @@ def get_cleaned_languages(languages_dict, acceptable_modifiers, list_of_language
 # and the value at that index represents the number of times that language is in the example
 # the first vector uses only the first language in a given word's language list (so it represents the most recent language of origin)
 # the other vector uses all of the langauges
-# other vectors (e.g., one representing the relative proportions of languages in an example) can be calculated from the outputs
-def vectorize(line, ordered_languages, include_stopwords, stopwords):
+# lastly, the function takes a variable indicating whether the vector values should be determined by the count of languages present or frequency (relative to number of words)
+def vectorize(line, etym_dict, ordered_languages, acceptable_modifiers, list_of_languages, include_stopwords, stop_words, freq_or_count):
 	# initialize the vectors
 	vector_first = np.zeros(len(ordered_languages))
 	vector_all = np.zeros(len(ordered_languages))
+	words_added = 0
 	try:
 		for word in word_tokenize(line):
-			if (include_stopwords == False) or ((include_stopwords == True) and (word not in stopwords)):
+			if (include_stopwords == False) and (word in stop_words):
+				continue
+			else:
 				try:
 					lem = get_lem(word)[0]
 					curr_entry = ""
@@ -117,14 +121,34 @@ def vectorize(line, ordered_languages, include_stopwords, stopwords):
 								vector_first[idx] += 1
 							vector_all[idx] += 1
 							first = False
+						words_added += 1
 				# if there's a problem with getting the languages for a given word, skip it
-				except:
+				except Exception as e:
+					# print e
 					pass
 	# if there are any problems with word tokenizing the line, return false
-	except:
+	except Exception as e:
+		# print e
 		return False
+	if freq_or_count == "frequency":
+		for i in range(len(vector_first)):
+			vector_first[i] /= float(words_added)
+			vector_all[i] /= float(words_added)
 	return vector_first, vector_all
 
+
+def get_vectors(content, etym_dict, ordered_languages, acceptable_modifiers, list_of_languages, include_stopwords, stop_words, freq_or_count):
+	vectors_first = []
+	vectors_all = []
+	for line in content:
+		# vectorize the line, if there's an error (because it returned False, which isn't iterable) then skip
+		try:
+			vector_first, vector_all = vectorize(line, etym_dict, ordered_languages, acceptable_modifiers, list_of_languages, include_stopwords, stop_words, freq_or_count)
+			vectors_first.append(vector_first)
+			vectors_all.append(vector_all)
+		except:
+			pass
+	return vectors_first, vectors_all
 
 # function to generate a testing indices of a list of vectors for a given number of folds
 # this function will create an array of length (num_folds) in which each element contains the indices of (number of vectors / num_folds) vectors that
