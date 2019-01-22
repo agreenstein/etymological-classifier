@@ -131,9 +131,10 @@ def vectorize(line, etym_dict, ordered_languages, acceptable_modifiers, list_of_
 		# print e
 		return False
 	if freq_or_count == "frequency":
-		for i in range(len(vector_first)):
-			vector_first[i] /= float(words_added)
-			vector_all[i] /= float(words_added)
+		if words_added != 0:
+			for i in range(len(vector_first)):
+				vector_first[i] /= float(words_added)
+				vector_all[i] /= float(words_added)
 	return vector_first, vector_all
 
 

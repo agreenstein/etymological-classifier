@@ -15,11 +15,13 @@ import time
 
 
 # this script should be called from the command line as follows:
-# python experiment.py
+# python experiment.py <results_output_file>
 if __name__ == "__main__":
 	start_time = time.time()
-	outfile = "experiment_result.txt"
-	ouput = open(outfile, 'w')
+	outfile = sys.argv[1]
+	output = open(outfile, 'w')
+	output.write("-------Experiment Results-------\n")
+	permutation_counter = 0
 
 	lemmatizer = WordNetLemmatizer()
 	stop_words = set(stopwords.words('english'))
@@ -54,8 +56,8 @@ if __name__ == "__main__":
 		freq_or_count_options = ["count", "frequency"]
 		# second loop: vary whether we generate vectors using language frequency or count
 		for freq_or_count in freq_or_count_options:
-			print "-------Experiment variation: vectors created using language  %s-------" % freq_or_count
-			output.write("-------Experiment variation: vectors created using language  %s-------\n" % freq_or_count)
+			print "-------Experiment variation: vectors created using language %s-------" % freq_or_count
+			output.write("-------Experiment variation: vectors created using language %s-------\n" % freq_or_count)
 			subjective_vectors_first, subjective_vectors_all = utils.get_vectors(subjective_content, etym_dict, ordered_languages, acceptable_modifiers, list_of_languages, include_stopwords, stop_words, freq_or_count)
 			objective_vectors_first, objective_vectors_all = utils.get_vectors(objective_content, etym_dict, ordered_languages, acceptable_modifiers, list_of_languages, include_stopwords, stop_words, freq_or_count)
 			print "Vectors created"
@@ -69,6 +71,8 @@ if __name__ == "__main__":
 			for parameter in first_or_all_languages_options:
 				print "-------Experiment variation: using %s-------" % parameter
 				output.write("-------Experiment variation: using %s-------\n" % parameter)
+				print "--Perumutation %d--" % permutation_counter
+				permutation_counter += 1
 				misclassified_indices_for_exp = []
 				for i in range(num_folds):
 					# split the data into testing and training given the indices for the current fold
@@ -83,15 +87,20 @@ if __name__ == "__main__":
 					testing_data = sub_testing_data + ob_testing_data
 					testing_labels  = sub_testing_labels + ob_testing_labels
 
-					predictions = utils.classify_svm(training_data, training_labels, testing_data)
-					misclassified_indices = utils.find_errors(predictions, testing_labels)
-					misclassified_indices_for_exp.append(misclassified_indices)
-					misclassified_pct = 100*(float(len(misclassified_indices)) / len(predictions))
-					result = "%.1f%% misclassified \n" % (misclassified_pct)
+					lb = sklearn.preprocessing.LabelBinarizer()
+					y_train = np.array([number[0] for number in lb.fit_transform(training_labels)])
+					y_test = np.array([number[0] for number in lb.fit_transform(testing_labels)])
+					f1_pred = utils.classify_svm(training_data, y_train, testing_data)
+					result = "f1_score: %.3f\n" % sklearn.metrics.f1_score(y_test, f1_pred)
+					# predictions = utils.classify_svm(training_data, training_labels, testing_data)
+					# misclassified_indices = utils.find_errors(predictions, testing_labels)
+					# misclassified_indices_for_exp.append(misclassified_indices)
+					# misclassified_pct = 100*(float(len(misclassified_indices)) / len(predictions))
+					# result = "%.1f%% misclassified \n" % (misclassified_pct)
 					print result
 					output.write(result)
 
-    total_time = time.time() - start_time
-    print "time elapsed: %d minutes" % (total_time / 60)
+	total_time = time.time() - start_time
+	print "time elapsed: %d minutes" % (total_time / 60)
 
 
