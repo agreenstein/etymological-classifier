@@ -1,0 +1,95 @@
+-------Experiment Results-------
+-------Experiment variation: include_stopwords set to True-------
+-------Experiment variation: vectors created using language count-------
+-------Experiment variation: using first language-------
+f1_score: 0.624
+f1_score: 0.635
+f1_score: 0.642
+f1_score: 0.659
+f1_score: 0.653
+f1_score: 0.608
+f1_score: 0.638
+f1_score: 0.658
+f1_score: 0.633
+f1_score: 0.650
+-------Experiment variation: using all languages-------
+f1_score: 0.665
+f1_score: 0.667
+f1_score: 0.663
+f1_score: 0.667
+f1_score: 0.692
+f1_score: 0.667
+f1_score: 0.661
+f1_score: 0.682
+f1_score: 0.651
+f1_score: 0.662
+-------Experiment variation: vectors created using language frequency-------
+-------Experiment variation: using first language-------
+f1_score: 0.470
+f1_score: 0.454
+f1_score: 0.505
+f1_score: 0.488
+f1_score: 0.499
+f1_score: 0.495
+f1_score: 0.492
+f1_score: 0.491
+f1_score: 0.483
+f1_score: 0.493
+-------Experiment variation: using all languages-------
+f1_score: 0.562
+f1_score: 0.553
+f1_score: 0.585
+f1_score: 0.567
+f1_score: 0.571
+f1_score: 0.576
+f1_score: 0.571
+f1_score: 0.573
+f1_score: 0.584
+f1_score: 0.586
+-------Experiment variation: include_stopwords set to False-------
+-------Experiment variation: vectors created using language count-------
+-------Experiment variation: using first language-------
+f1_score: 0.659
+f1_score: 0.653
+f1_score: 0.625
+f1_score: 0.638
+f1_score: 0.652
+f1_score: 0.641
+f1_score: 0.642
+f1_score: 0.652
+f1_score: 0.613
+f1_score: 0.635
+-------Experiment variation: using all languages-------
+f1_score: 0.667
+f1_score: 0.644
+f1_score: 0.645
+f1_score: 0.650
+f1_score: 0.678
+f1_score: 0.653
+f1_score: 0.655
+f1_score: 0.664
+f1_score: 0.653
+f1_score: 0.660
+-------Experiment variation: vectors created using language frequency-------
+-------Experiment variation: using first language-------
+f1_score: 0.493
+f1_score: 0.524
+f1_score: 0.503
+f1_score: 0.510
+f1_score: 0.494
+f1_score: 0.499
+f1_score: 0.521
+f1_score: 0.497
+f1_score: 0.500
+f1_score: 0.514
+-------Experiment variation: using all languages-------
+f1_score: 0.599
+f1_score: 0.599
+f1_score: 0.567
+f1_score: 0.591
+f1_score: 0.584
+f1_score: 0.611
+f1_score: 0.587
+f1_score: 0.599
+f1_score: 0.629
+f1_score: 0.581
